@@ -1,4 +1,4 @@
-const FileType = require('file-type');
+import FileType from 'file-type';
 const Sequelize = require('sequelize');
 const fs = require('node:fs');
 const path = require('node:path');
