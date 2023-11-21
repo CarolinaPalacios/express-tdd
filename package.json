@@ -4,9 +4,9 @@
   "description": "tdd with express",
   "main": "app.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development nodemon index.js",
-    "start:prod": "NODE_ENV=production node index.js",
-    "start:staging": "NODE_ENV=staging node index.js",
+    "start": "cross-env NODE_ENV=development nodemon index.js",
+    "start:prod": "cross-env NODE_ENV=production node index.js",
+    "start:staging": "cross-env NODE_ENV=staging node index.js",
     "test": "cross-env NODE_ENV=test jest --watch",
     "lint": "eslint ."
   },
