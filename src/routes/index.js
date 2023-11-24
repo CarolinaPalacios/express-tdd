@@ -1,12 +1,14 @@
-const router = require('express').Router();
-const userRouter = require('./userRouter');
-const authRouter = require('./authRouter');
-const fileRouter = require('./fileRouter');
-const hoaxRouter = require('./hoaxRouter');
+import { Router } from 'express';
+import userRouter from './userRouter.js';
+import authRouter from './authRouter.js';
+import fileRouter from './fileRouter.js';
+import hoaxRouter from './hoaxRouter.js';
+
+const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/users', userRouter);
 router.use('/hoaxes/attachments', fileRouter);
 router.use('/', hoaxRouter);
 
-module.exports = router;
+export default router;

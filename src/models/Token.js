@@ -1,5 +1,5 @@
-const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
 class Token extends Model {}
 
@@ -19,4 +19,4 @@ Token.init(
   }
 );
 
-module.exports = Token;
+export default Token;

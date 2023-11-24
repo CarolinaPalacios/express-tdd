@@ -1,4 +1,4 @@
-const pagination = (req, res, next) => {
+export const pagination = (req, res, next) => {
   const pageAsNumber = Number(req.query.page);
   const sizeAsNumber = Number(req.query.size);
 
@@ -29,5 +29,3 @@ const pagination = (req, res, next) => {
 
   next();
 };
-
-module.exports = { pagination };

@@ -1,10 +1,12 @@
-const { check, validationResult } = require('express-validator');
-const hoaxRouter = require('express').Router();
-const hoaxService = require('../service/hoaxService');
-const { pagination } = require('../middlewares/pagination');
-const { AuthenticationException } = require('../error/AuthenticationException');
-const { ForbiddenException } = require('../error/ForbiddenException');
-const { ValidationException } = require('../error/ValidationException');
+import { check, validationResult } from 'express-validator';
+import { Router } from 'express';
+import { saveHoax, getHoaxes, deleteHoax } from '../service/hoaxService.js';
+import { pagination } from '../middlewares/pagination.js';
+import { AuthenticationException } from '../error/AuthenticationException.js';
+import { ForbiddenException } from '../error/ForbiddenException.js';
+import { ValidationException } from '../error/ValidationException.js';
+
+const hoaxRouter = Router();
 
 hoaxRouter.post(
   '/hoaxes',
@@ -21,7 +23,7 @@ hoaxRouter.post(
       return next(new ValidationException(errors.array()));
     }
 
-    await hoaxService.saveHoax(req.body, req.authenticatedUser);
+    await saveHoax(req.body, req.authenticatedUser);
     return res.json({ message: req.t('hoax_submit_success') });
   }
 );
@@ -32,7 +34,7 @@ hoaxRouter.get(
   async (req, res, next) => {
     const { page, size, nextPage, prevPage } = req.pagination;
     try {
-      const hoaxes = await hoaxService.getHoaxes(
+      const hoaxes = await getHoaxes(
         page,
         size,
         nextPage,
@@ -51,11 +53,11 @@ hoaxRouter.delete('/hoaxes/:id', async (req, res, next) => {
     return next(new ForbiddenException('unauthorized_hoax_delete'));
   }
   try {
-    await hoaxService.deleteHoax(req.params.id, req.authenticatedUser.id);
+    await deleteHoax(req.params.id, req.authenticatedUser.id);
     return res.send();
   } catch (error) {
     return next(error);
   }
 });
 
-module.exports = hoaxRouter;
+export default hoaxRouter;

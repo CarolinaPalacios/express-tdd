@@ -1,47 +1,56 @@
-import FileType from 'file-type';
-const Sequelize = require('sequelize');
-const fs = require('node:fs');
-const path = require('node:path');
-const config = require('config');
-const { randomString } = require('../shared/generator');
-const FileAttachment = require('../models/FileAttachment');
-const Hoax = require('../models/Hoax');
+import { fileTypeFromBuffer } from 'file-type';
+import { Op } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
+import {
+  uploadDirConfigs,
+  profileDirConfigs,
+  attachmentDirConfigs,
+} from '../../database/config.js';
+import { randomString } from '../shared/generator.js';
+import FileAttachment from '../models/FileAttachment.js';
+import Hoax from '../models/Hoax.js';
 
-const { uploadDir, profileDir, attachmentDir } = config;
+const activeProfile = 'development';
+
+const uploadDir = uploadDirConfigs[activeProfile];
+const profileDir = profileDirConfigs[activeProfile];
+const attachmentDir = attachmentDirConfigs[activeProfile];
+
 const profileFolder = path.join('.', uploadDir, profileDir);
 const attachmentFolder = path.join('.', uploadDir, attachmentDir);
 
-const createFolders = () => {
+export const createFolders = () => {
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
   if (!fs.existsSync(profileFolder)) fs.mkdirSync(profileFolder);
   if (!fs.existsSync(attachmentFolder)) fs.mkdirSync(attachmentFolder);
 };
 
-const saveProfileImage = async (base64File) => {
+export const saveProfileImage = async (base64File) => {
   const filename = randomString(32);
   const filePath = path.join(profileFolder, filename);
   await fs.promises.writeFile(filePath, base64File, 'base64');
   return filename;
 };
 
-const deleteProfileImage = async (filename) => {
+export const deleteProfileImage = async (filename) => {
   const filePath = path.join(profileFolder, filename);
   await fs.promises.unlink(filePath);
 };
 
-const isLessThan2MB = (buffer) => {
+export const isLessThan2MB = (buffer) => {
   return buffer.length < 2 * 1024 * 1024;
 };
 
-const isSupportedFileType = async (buffer) => {
-  const type = await FileType.fileTypeFromBuffer(buffer);
+export const isSupportedFileType = async (buffer) => {
+  const type = await fileTypeFromBuffer(buffer);
   return !type
     ? false
     : type.mime === 'image/png' || type.mime === 'image/jpeg';
 };
 
-const saveAttachment = async (file) => {
-  const type = await FileType.fileTypeFromBuffer(file.buffer);
+export const saveAttachment = async (file) => {
+  const type = await fileTypeFromBuffer(file.buffer);
   let fileType;
   let filename = randomString(32);
   if (type) {
@@ -62,24 +71,24 @@ const saveAttachment = async (file) => {
   };
 };
 
-const associateFileToHoax = async (attachmentId, hoaxId) => {
+export const associateFileToHoax = async (attachmentId, hoaxId) => {
   const attachment = await FileAttachment.findByPk(attachmentId);
   if (!attachment) return;
   if (attachment.hoaxId) return;
   await attachment.update({ hoaxId });
 };
 
-const removeUnusedAttachments = async () => {
+export const removeUnusedAttachments = async () => {
   const ONE_DAY = 24 * 60 * 60 * 1000;
   setInterval(async () => {
     const oneDayOld = new Date(Date.now() - ONE_DAY);
     const attachments = await FileAttachment.findAll({
       where: {
         uploadDate: {
-          [Sequelize.Op.lt]: oneDayOld,
+          [Op.lt]: oneDayOld,
         },
         hoaxId: {
-          [Sequelize.Op.is]: null,
+          [Op.is]: null,
         },
       },
     });
@@ -91,7 +100,7 @@ const removeUnusedAttachments = async () => {
   }, ONE_DAY);
 };
 
-const deleteAttachment = async (filename) => {
+export const deleteAttachment = async (filename) => {
   const filePath = path.join(attachmentFolder, filename);
   try {
     await fs.promises.access(filePath);
@@ -101,7 +110,7 @@ const deleteAttachment = async (filename) => {
   }
 };
 
-const deleteUserFiles = async (user) => {
+export const deleteUserFiles = async (user) => {
   if (user.image) await deleteProfileImage(user.image);
   const attachments = await FileAttachment.findAll({
     attributes: ['filename'],
@@ -116,17 +125,4 @@ const deleteUserFiles = async (user) => {
   for (const attachment of attachments) {
     await deleteAttachment(attachment.getDataValue('filename'));
   }
-};
-
-module.exports = {
-  createFolders,
-  saveProfileImage,
-  deleteProfileImage,
-  isLessThan2MB,
-  isSupportedFileType,
-  saveAttachment,
-  associateFileToHoax,
-  removeUnusedAttachments,
-  deleteAttachment,
-  deleteUserFiles,
 };

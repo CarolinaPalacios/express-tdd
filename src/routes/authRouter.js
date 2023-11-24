@@ -1,12 +1,12 @@
-const bcrypt = require('bcrypt');
-const { check, validationResult } = require('express-validator');
+import { compare } from 'bcrypt';
+import { check, validationResult } from 'express-validator';
+import { Router } from 'express';
+import { findByEmail } from '../service/userService.js';
+import { createToken, deleteToken } from '../service/tokenService.js';
+import { AuthenticationException } from '../error/AuthenticationException.js';
+import { ForbiddenException } from '../error/ForbiddenException.js';
 
-const authRouter = require('express').Router();
-const userService = require('../service/userService');
-const tokenService = require('../service/tokenService');
-
-const { AuthenticationException } = require('../error/AuthenticationException');
-const { ForbiddenException } = require('../error/ForbiddenException');
+const authRouter = Router();
 
 authRouter.post('/', check('email').isEmail(), async (req, res, next) => {
   const errors = validationResult(req);
@@ -15,11 +15,11 @@ authRouter.post('/', check('email').isEmail(), async (req, res, next) => {
   }
 
   const { email, password } = req.body;
-  const user = await userService.findByEmail(email);
+  const user = await findByEmail(email);
   if (!user) {
     return next(new AuthenticationException());
   }
-  const validPassword = await bcrypt.compare(password, user.password);
+  const validPassword = await compare(password, user.password);
   if (!validPassword) {
     return next(new AuthenticationException());
   }
@@ -27,7 +27,8 @@ authRouter.post('/', check('email').isEmail(), async (req, res, next) => {
     return next(new ForbiddenException());
   }
 
-  const token = await tokenService.createToken(user);
+  const token = await createToken(user);
+
   return res.json({
     id: user.id,
     username: user.username,
@@ -40,9 +41,9 @@ authRouter.post('/logout', async (req, res) => {
   const { authorization } = req.headers;
   if (authorization) {
     const token = authorization.substring(7);
-    await tokenService.deleteToken(token);
+    await deleteToken(token);
   }
   return res.send();
 });
 
-module.exports = authRouter;
+export default authRouter;

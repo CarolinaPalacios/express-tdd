@@ -1,0 +1,10 @@
+{
+  "development": {
+    "username": "db-user",
+    "password": "db-p4ss",
+    "database": "hoaxify",
+    "host": "localhost",
+    "dialect": "sqlite",
+    "storage": "./dev.sqlite3"
+  }
+}

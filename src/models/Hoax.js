@@ -1,6 +1,6 @@
-const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
-const FileAttachment = require('./FileAttachment');
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
+import FileAttachment from './FileAttachment.js';
 
 class Hoax extends Model {}
 
@@ -23,4 +23,4 @@ Hoax.init(
 Hoax.hasOne(FileAttachment, { foreignKey: 'hoaxId', onDelete: 'cascade' });
 FileAttachment.belongsTo(Hoax);
 
-module.exports = Hoax;
+export default Hoax;

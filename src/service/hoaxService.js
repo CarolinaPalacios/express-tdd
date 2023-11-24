@@ -1,11 +1,11 @@
-const Hoax = require('../models/Hoax');
-const User = require('../models/User');
-const FileAttachment = require('../models/FileAttachment');
-const fileService = require('./fileService');
-const { NotFoundException } = require('../error/NotFoundException');
-const { ForbiddenException } = require('../error/ForbiddenException');
+import Hoax from '../models/Hoax.js';
+import User from '../models/User.js';
+import FileAttachment from '../models/FileAttachment.js';
+import { associateFileToHoax, deleteAttachment } from './fileService.js';
+import { NotFoundException } from '../error/NotFoundException.js';
+import { ForbiddenException } from '../error/ForbiddenException.js';
 
-const saveHoax = async (body, user) => {
+export const saveHoax = async (body, user) => {
   const hoax = {
     content: body.content,
     timestamps: Date.now(),
@@ -13,11 +13,11 @@ const saveHoax = async (body, user) => {
   };
   const { id } = await Hoax.create(hoax);
   if (body.fileAttachment) {
-    await fileService.associateFileToHoax(body.fileAttachment, id);
+    await associateFileToHoax(body.fileAttachment, id);
   }
 };
 
-const getHoaxes = async (page, size, nextPage, prevPage, userId) => {
+export const getHoaxes = async (page, size, nextPage, prevPage, userId) => {
   let where = {};
   if (userId) {
     const user = await User.findByPk(userId);
@@ -61,7 +61,7 @@ const getHoaxes = async (page, size, nextPage, prevPage, userId) => {
   };
 };
 
-const deleteHoax = async (hoaxId, userId) => {
+export const deleteHoax = async (hoaxId, userId) => {
   const hoaxToBeDeleted = await Hoax.findOne({
     where: { id: hoaxId, userId },
     include: { model: FileAttachment },
@@ -71,13 +71,7 @@ const deleteHoax = async (hoaxId, userId) => {
   }
   const hoaxJSON = hoaxToBeDeleted.get({ plain: true });
   if (hoaxJSON.fileAttachment !== null) {
-    await fileService.deleteAttachment(hoaxJSON.fileAttachment.filename);
+    await deleteAttachment(hoaxJSON.fileAttachment.filename);
   }
   await hoaxToBeDeleted.destroy();
-};
-
-module.exports = {
-  saveHoax,
-  getHoaxes,
-  deleteHoax,
 };

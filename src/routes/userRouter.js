@@ -1,19 +1,28 @@
-const { check, validationResult } = require('express-validator');
-const { ValidationException } = require('../error/ValidationException');
-const { ForbiddenException } = require('../error/ForbiddenException');
-const userService = require('../service/userService');
-const fileService = require('../service/fileService');
-const { pagination } = require('../middlewares/pagination');
-const { basicAuthentication } = require('../middlewares/basicAuthentication');
-const {
-  passwordResetTokenValidator,
-} = require('../middlewares/passwordResetTokenValidator');
-const userRouter = require('express').Router();
+import { Router } from 'express';
+import { check, validationResult } from 'express-validator';
+import { ValidationException } from '../error/ValidationException.js';
+import { ForbiddenException } from '../error/ForbiddenException.js';
+import {
+  getAllUsers,
+  getUser,
+  updateUser,
+  deleteUser,
+  findByEmail,
+  saveUser,
+  activateUser,
+  passwordResetRequest,
+  updatePassword,
+} from '../service/userService.js';
+import { isLessThan2MB, isSupportedFileType } from '../service/fileService.js';
+import { pagination } from '../middlewares/pagination.js';
+import { basicAuthentication } from '../middlewares/basicAuthentication.js';
+import { passwordResetTokenValidator } from '../middlewares/passwordResetTokenValidator.js';
+const userRouter = Router();
 
 userRouter.get('/', pagination, async (req, res) => {
   const { page, size, nextPage, prevPage } = req.pagination;
   const authenticatedUser = req.authenticatedUser;
-  const users = await userService.getAllUsers(
+  const users = await getAllUsers(
     page,
     size,
     nextPage,
@@ -26,7 +35,7 @@ userRouter.get('/', pagination, async (req, res) => {
 userRouter.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = await userService.getUser(id);
+    const user = await getUser(id);
     return res.json(user);
   } catch (error) {
     next(error);
@@ -41,14 +50,14 @@ userRouter.put(
     .bail()
     .isLength({ min: 4, max: 32 })
     .withMessage('username_size'),
-  check('iamge').custom(async (imageAsBase64String) => {
+  check('image').custom(async (imageAsBase64String) => {
     if (!imageAsBase64String) return true;
     const buffer = Buffer.from(imageAsBase64String, 'base64');
-    if (!fileService.isLessThan2MB(buffer)) {
+    if (!isLessThan2MB(buffer)) {
       throw new Error('profile_image_size');
     }
-    const supportedType = await fileService.isSupportedFileType(buffer);
-    if (!supportedType) throw new Error('unsupported_image_file_type');
+    const supportedType = await isSupportedFileType(buffer);
+    if (!supportedType) throw new Error('unsupported_image_file');
     return true;
   }),
   async (req, res, next) => {
@@ -56,15 +65,15 @@ userRouter.put(
     const { id } = req.params;
 
     if (!authenticatedUser || authenticatedUser.id !== Number(id)) {
-      return next(new ForbiddenException('unauthroized_user_update'));
+      return next(new ForbiddenException('unauthorized_user_update'));
     }
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       throw new ValidationException(errors.array());
     }
-
-    const user = await userService.updateUser(id, req.body);
+    const user = await updateUser(id, req.body);
+    console.log(user);
     return res.json(user);
   }
 );
@@ -85,7 +94,7 @@ userRouter.post(
     .withMessage('email_invalid')
     .bail()
     .custom(async (email) => {
-      const user = await userService.findByEmail(email);
+      const user = await findByEmail(email);
       if (user) {
         throw new Error('email_inuse');
       }
@@ -99,6 +108,7 @@ userRouter.post(
     .bail()
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).*$/)
     .withMessage('password_pattern'),
+  basicAuthentication,
   async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -106,7 +116,7 @@ userRouter.post(
     }
 
     try {
-      await userService.saveUser(req.body);
+      await saveUser(req.body);
       return res.json({ message: req.t('user_create_success') });
     } catch (error) {
       next(error);
@@ -117,7 +127,7 @@ userRouter.post(
 userRouter.post('/token/:token', async (req, res, next) => {
   const { token } = req.params;
   try {
-    await userService.activateUser(token);
+    await activateUser(token);
     return res.json({ message: req.t('account_activation_success') });
   } catch (error) {
     next(error);
@@ -130,7 +140,7 @@ userRouter.delete('/:id', basicAuthentication, async (req, res, next) => {
   if (!authenticatedUser || authenticatedUser.id !== Number(id)) {
     return next(new ForbiddenException('unauthorized_user_delete'));
   }
-  await userService.deleteUser(id);
+  await deleteUser(id);
   return res.json({ success: true, msg: 'User deleted' });
 });
 
@@ -143,7 +153,7 @@ userRouter.post(
       return next(new ValidationException(errors.array()));
     }
     try {
-      await userService.passwordResetRequest(req.body.email);
+      await passwordResetRequest(req.body.email);
       return res.json({ message: req.t('password_reset_request_success') });
     } catch (error) {
       next(error);
@@ -168,9 +178,9 @@ userRouter.put(
     if (!errors.isEmpty()) {
       return next(new ValidationException(errors.array()));
     }
-    await userService.updatePassword(req.body);
+    await updatePassword(req.body);
     return res.json({ message: 'Password updated' });
   }
 );
 
-module.exports = userRouter;
+export default userRouter;

@@ -1,4 +1,4 @@
-const { createLogger, transports, format } = require('winston');
+import { createLogger, transports, format } from 'winston';
 
 const customFormat = format.combine(
   format.timestamp(),
@@ -23,4 +23,4 @@ const logger = createLogger({
   silent: process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'staging',
 });
 
-module.exports = { logger };
+export default logger;

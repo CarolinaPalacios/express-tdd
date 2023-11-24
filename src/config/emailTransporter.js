@@ -1,8 +1,8 @@
-const nodemailer = require('nodemailer');
-const config = require('./config');
+import { createTransport } from 'nodemailer';
+import { mailConfigs } from '../../database/config.js';
 
-const mailConfig = config.get('mail');
+const mailConfig = mailConfigs.development;
 
-const transporter = nodemailer.createTransport({ ...mailConfig });
+const transporter = createTransport({ ...mailConfig });
 
-module.exports = transporter;
+export default transporter;

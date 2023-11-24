@@ -1,9 +1,9 @@
-const nodemailer = require('nodemailer');
-const transporter = require('../config/emailTransporter');
-const logger = require('../shared/logger');
+import { getTestMessageUrl } from 'nodemailer';
+import transporter from '../config/emailTransporter.js';
+import logger from '../shared/logger.js';
 
-const sendAccountActivation = async (email, token) => {
-  const info = await transporter.sendMail({
+export const sendAccountActivation = async (email, token) => {
+  const message = {
     from: 'My app <info@my-app.com>',
     to: email,
     subject: 'Account activation',
@@ -12,14 +12,17 @@ const sendAccountActivation = async (email, token) => {
       <p>Please, click on the link below to activate your account</p>
       </div>
       <div>
-      <a href="http://localhost:8080/#/login=${token}">Activate</a>
+      <a href="http://localhost:8080/#/account-activation=${token}">Activate</a>
       </div>
     `,
-  });
-  logger.info(`url: ${nodemailer.getTestMessageUrl(info)}`);
+  };
+  const info = transporter.sendMail(message);
+
+  logger.info(`url: ${getTestMessageUrl(info)}`);
+  return info;
 };
 
-const sendPasswordReset = async (email, token) => {
+export const sendPasswordReset = async (email, token) => {
   const info = await transporter.sendMail({
     from: 'My app <info@my-app.com>',
     to: email,
@@ -33,10 +36,5 @@ const sendPasswordReset = async (email, token) => {
       </div>
     `,
   });
-  logger.info(`url: ${nodemailer.getTestMessageUrl(info)}`);
-};
-
-module.exports = {
-  sendAccountActivation,
-  sendPasswordReset,
+  logger.info(`url: ${getTestMessageUrl(info)}`);
 };

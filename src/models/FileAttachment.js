@@ -1,5 +1,5 @@
-const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
 
 class FileAttachment extends Model {}
 
@@ -22,4 +22,4 @@ FileAttachment.init(
   }
 );
 
-module.exports = FileAttachment;
+export default FileAttachment;

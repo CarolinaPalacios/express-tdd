@@ -1,16 +1,23 @@
-const bcrypt = require('bcrypt');
-const Sequelize = require('sequelize');
-const sequelize = require('../config/database');
-const User = require('../models/User');
-const { randomString } = require('../shared/generator');
-const tokenService = require('../service/tokenService');
-const fileService = require('../service/fileService');
-const emailService = require('../service/emailService');
-const { NotFoundException } = require('../error/NotFoundException');
-const { EmailException } = require('../error/EmailException');
-const { InvalidTokenException } = require('../error/InvalidTokenException');
+import bcrypt from 'bcrypt';
+import { Op } from 'sequelize';
+import sequelize from '../config/database.js';
+import User from '../models/User.js';
+import { randomString } from '../shared/generator.js';
+import { clearTokens } from '../service/tokenService.js';
+import {
+  deleteProfileImage,
+  deleteUserFiles,
+  saveProfileImage,
+} from './fileService.js';
+import {
+  sendAccountActivation,
+  sendPasswordReset,
+} from '../service/emailService.js';
+import { NotFoundException } from '../error/NotFoundException.js';
+import { EmailException } from '../error/EmailException.js';
+import { InvalidTokenException } from '../error/InvalidTokenException.js';
 
-const saveUser = async (body) => {
+export const saveUser = async (body) => {
   const { username, email, password } = body;
 
   const hash = await bcrypt.hash(password, 10);
@@ -27,7 +34,7 @@ const saveUser = async (body) => {
   await User.create(user, { transaction });
 
   try {
-    await emailService.sendAccountActivation(email, user.activationToken);
+    await sendAccountActivation(email, user.activationToken);
     await transaction.commit();
   } catch (error) {
     await transaction.rollback();
@@ -43,7 +50,7 @@ const saveUser = async (body) => {
   // };
 };
 
-const activateUser = async (token) => {
+export const activateUser = async (token) => {
   const user = await User.findOne({ where: { activationToken: token } });
   if (!user) throw new InvalidTokenException();
   user.update({
@@ -52,7 +59,7 @@ const activateUser = async (token) => {
   });
 };
 
-const getAllUsers = async (
+export const getAllUsers = async (
   page,
   size,
   nextPage,
@@ -63,10 +70,10 @@ const getAllUsers = async (
     where: {
       inactive: false,
       id: {
-        [Sequelize.Op.not]: authenticatedUser ? authenticatedUser.id : 0,
+        [Op.not]: authenticatedUser ? authenticatedUser.id : 0,
       },
     },
-    attributes: ['id', 'username', 'email'],
+    attributes: ['id', 'username', 'email', 'image'],
     limit: size,
     offset: page * size,
   });
@@ -78,32 +85,33 @@ const getAllUsers = async (
   };
 };
 
-const getUser = async (id) => {
+export const getUser = async (id) => {
   const user = await User.findByPk(id, {
     where: {
       inactive: false,
     },
-    attributes: ['id', 'username', 'email'],
+    attributes: ['id', 'username', 'email', 'image'],
   });
   if (!user) throw new NotFoundException('user_not_found');
   return user;
 };
 
-const findByEmail = async (email) => {
+export const findByEmail = async (email) => {
   return await User.findOne({ where: { email } });
 };
 
-const updateUser = async (id, body) => {
+export const updateUser = async (id, body) => {
   const user = await User.findByPk(id);
+  console.log('user', user);
   user.username = body.username;
   if (body.image) {
     if (user.image) {
-      await fileService.deleteProfileImage(user.image);
+      await deleteProfileImage(user.image);
     }
-    user.image = await fileService.saveProfileImage(body.image);
+    user.image = await saveProfileImage(body.image);
   }
   await user.save();
-
+  console.log(user);
   return {
     id,
     username: user.username,
@@ -112,25 +120,25 @@ const updateUser = async (id, body) => {
   };
 };
 
-const deleteUser = async (id) => {
+export const deleteUser = async (id) => {
   const user = await User.findByPk(id);
-  await fileService.deleteUserFiles(user);
+  await deleteUserFiles(user);
   await user.destroy();
 };
 
-const passwordResetRequest = async (email) => {
+export const passwordResetRequest = async (email) => {
   const user = await findByEmail(email);
   if (!user) throw new NotFoundException('email_not_inuse');
   user.passwordResetToken = randomString(16);
   await user.save();
   try {
-    await emailService.sendPasswordReset(email, user.passwordResetToken);
+    await sendPasswordReset(email, user.passwordResetToken);
   } catch (error) {
     throw new EmailException();
   }
 };
 
-const updatePassword = async (updateRequest) => {
+export const updatePassword = async (updateRequest) => {
   const user = await findByPasswordResetToken(updateRequest.passwordResetToken);
   const hash = await bcrypt.hash(updateRequest.password, 10);
   user.password = hash;
@@ -138,22 +146,9 @@ const updatePassword = async (updateRequest) => {
   user.inactive = false;
   user.activationToken = null;
   await user.save();
-  await tokenService.clearTokens(user.id);
+  await clearTokens(user.id);
 };
 
-const findByPasswordResetToken = (token) => {
+export const findByPasswordResetToken = (token) => {
   return User.findOne({ where: { passwordResetToken: token } });
-};
-
-module.exports = {
-  saveUser,
-  getAllUsers,
-  getUser,
-  updateUser,
-  deleteUser,
-  findByEmail,
-  activateUser,
-  passwordResetRequest,
-  updatePassword,
-  findByPasswordResetToken,
 };

@@ -1,11 +1,13 @@
-const tokenService = require('../service/tokenService');
+import { verify } from '../service/tokenService.js';
 
-const tokenAuthentication = async (req, res, next) => {
+export const tokenAuthentication = async (req, res, next) => {
   const { authorization } = req.headers;
+  console.log(authorization);
   if (authorization) {
-    const token = authorization.substring(7);
+    const token = authorization.substring(6);
     try {
-      const user = await tokenService.verify(token);
+      const user = await verify(token);
+      console.log(user);
       req.authenticatedUser = user;
     } catch (error) {
       console.error(error);
@@ -13,5 +15,3 @@ const tokenAuthentication = async (req, res, next) => {
   }
   next();
 };
-
-module.exports = { tokenAuthentication };

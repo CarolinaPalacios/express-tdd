@@ -1,7 +1,7 @@
-const { Model, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
-const Token = require('./Token');
-const Hoax = require('./Hoax');
+import { Model, DataTypes } from 'sequelize';
+import sequelize from '../config/database.js';
+import Token from './Token.js';
+import Hoax from './Hoax.js';
 
 class User extends Model {}
 
@@ -41,4 +41,4 @@ User.hasMany(Hoax, { onDelete: 'cascade', foreignKey: 'userId' });
 
 Hoax.belongsTo(User);
 
-module.exports = User;
+export default User;

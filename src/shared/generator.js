@@ -1,10 +1,7 @@
-const crypto = require('crypto');
+import { randomBytes } from 'crypto';
 
-const randomString = (length) => {
-  return crypto
-    .randomBytes(length)
+export const randomString = (length) => {
+  return randomBytes(length)
     .toString('hex') // convert to hexadecimal format
     .slice(0, length); // return required number of characters
 };
-
-module.exports = { randomString };
